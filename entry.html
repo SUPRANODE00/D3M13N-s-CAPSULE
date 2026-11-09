@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capsulecraft: Cybernetic Emblem & Avatar Studio</title>
+  
+  <!-- Three.js & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #030712;
+      font-family: 'Rajdhani', sans-serif;
+      color: #e5e7eb;
+      user-select: none;
+    }
+    .font-orbitron { font-family: 'Orbitron', sans-serif; }
+    .font-mono-tech { font-family: 'Share Tech Mono', monospace; }
+    
+    /* Cyber Glassmorphism & Neon Glows */
+    .cyber-glass {
+      background: rgba(8, 15, 30, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 255, 204, 0.2);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+    }
+    .cyber-glass-gold {
+      background: rgba(25, 20, 8, 0.8);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 204, 0, 0.3);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 15px rgba(0, 255, 204, 0.4);
+    }
+    .glow-cyan-text {
+      text-shadow: 0 0 10px rgba(0, 255, 204, 0.6), 0 0 20px rgba(0, 255, 204, 0.3);
+    }
+    .glow-gold-text {
+      text-shadow: 0 0 10px rgba(255, 204, 0, 0.6);
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(3, 7, 18, 0.8);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #00ffcc;
+      border-radius: 2px;
+    }
+
+    /* Cyber Sliders */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: rgba(0, 255, 204, 0.1);
+      border: 1px solid rgba(0, 255, 204, 0.3);
+      height: 6px;
+      border-radius: 3px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 16px;
+      width: 16px;
+      border-radius: 50%;
+      background: #00ffcc;
+      cursor: pointer;
+      box-shadow: 0 0 10px #00ffcc;
+    }
+
+    /* Animated Radar Scanning Effect */
+    @keyframes sweep {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .radar-sweep {
+      animation: sweep 4s linear infinite;
+    }
+  </style>
+</head>
+<body class="relative h-screen w-screen overflow-hidden select-none">
+
+  <!-- 3D WEBGL CONTAINER -->
+  <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+  <!-- MAIN HUD INTERFACE WRAPPER -->
+  <div class="relative z-10 flex flex-col h-full pointer-events-none">
+    
+    <!-- 1. TOP TELEMETRY HUD BAR -->
+    <header class="cyber-glass px-4 py-2.5 flex items-center justify-between pointer-events-auto border-b border-cyan-500/30">
+      <div class="flex items-center space-x-3">
+        <button id="toggle-left-drawer" class="px-3 py-1.5 rounded bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/50 text-cyan-400 flex items-center space-x-2 text-xs tracking-wider font-orbitron transition-all">
+          <i data-lucide="sliders" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">SETTINGS</span>
+        </button>
+
+        <div class="flex items-center space-x-2">
+          <div class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></div>
+          <h1 class="font-orbitron font-extrabold text-sm sm:text-base tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-amber-400">
+            CAPSULECRAFT <span class="text-xs font-normal text-cyan-400/70 hidden md:inline">// v3.8 MATRIX STUDIO</span>
+          </h1>
+        </div>
+      </div>
+
+      <!-- Live Telemetry Ticker -->
+      <div class="hidden lg:flex items-center space-x-6 text-xs font-mono-tech text-cyan-300/80">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>UTC: <strong id="utc-clock" class="text-cyan-200">00:00:00.000</strong></span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <i data-lucide="users" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>AVATARS: <strong id="avatars-online-count" class="text-amber-300">1,492</strong></span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>HEX: <strong id="telemetry-hex" class="text-cyan-200">0x7F4A</strong></span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <i data-lucide="radio" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>NONARY: <strong id="telemetry-nonary" class="text-emerald-300">N9_442</strong></span>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <button id="sfx-toggle" class="p-2 rounded bg-cyan-950/40 border border-cyan-500/30 text-cyan-400 hover:text-amber-400 transition" title="Toggle Audio FX">
+          <i data-lucide="volume-2" class="w-4 h-4"></i>
+        </button>
+
+        <button id="toggle-right-drawer" class="px-4 py-1.5 rounded bg-gradient-to-r from-amber-500/20 to-cyan-500/20 hover:from-amber-500/40 hover:to-cyan-500/40 border border-amber-400/50 text-amber-300 flex items-center space-x-2 text-xs font-orbitron tracking-wider transition-all">
+          <i data-lucide="shield-check" id="user-badge-icon" class="w-4 h-4 text-amber-400"></i>
+          <span id="gateway-btn-text">🔒 GATEWAY ENTRY</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- CENTER OVERLAY INSTRUMENTS & TOOLBAR -->
+    <div class="flex-1 flex justify-between p-4 pointer-events-none relative overflow-hidden">
+      
+      <!-- LEFT DRAWER (SYSTEM SETTINGS & HARDWARE TELEMETRY) -->
+      <aside id="left-drawer" class="w-80 cyber-glass rounded-xl p-4 flex flex-col space-y-4 pointer-events-auto transform -translate-x-full transition-transform duration-300 ease-out border border-cyan-500/30 z-20 overflow-y-auto">
+        <div class="flex justify-between items-center border-b border-cyan-500/30 pb-2">
+          <h2 class="font-orbitron text-sm font-bold tracking-wider text-cyan-400 flex items-center gap-2">
+            <i data-lucide="activity" class="w-4 h-4"></i> SYSTEM HARDWARE HUD
+          </h2>
+          <button id="close-left-drawer" class="text-cyan-400/70 hover:text-cyan-200">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Hardware Toggles -->
+        <div class="space-y-3 font-mono-tech text-xs">
+          <div class="flex items-center justify-between p-2 rounded bg-cyan-950/40 border border-cyan-500/20">
+            <span class="flex items-center gap-2 text-cyan-200"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-cyan-400"></i> Live GPS Tracking</span>
+            <input type="checkbox" id="toggle-gps" checked class="accent-cyan-400 cursor-pointer">
+          </div>
+          <div class="flex items-center justify-between p-2 rounded bg-cyan-950/40 border border-cyan-500/20">
+            <span class="flex items-center gap-2 text-cyan-200"><i data-lucide="disc" class="w-3.5 h-3.5 text-teal-400"></i> Omni-Lens Core</span>
+            <input type="checkbox" id="toggle-omni" checked class="accent-teal-400 cursor-pointer">
+          </div>
+          <div class="flex items-center justify-between p-2 rounded bg-cyan-950/40 border border-cyan-500/20">
+            <span class="flex items-center gap-2 text-cyan-200"><i data-lucide="bluetooth" class="w-3.5 h-3.5 text-blue-400"></i> Bluetooth nRF Mode</span>
+            <input type="checkbox" id="toggle-bluetooth" class="accent-blue-400 cursor-pointer">
+          </div>
+          <div class="flex items-center justify-between p-2 rounded bg-cyan-950/40 border border-cyan-500/20">
+            <span class="flex items-center gap-2 text-cyan-200"><i data-lucide="rss" class="w-3.5 h-3.5 text-amber-400"></i> NFC Sensor Field</span>
+            <input type="checkbox" id="toggle-nfc" class="accent-amber-400 cursor-pointer">
+          </div>
+        </div>
+
+        <!-- Telemetry Dials & Meters -->
+        <div class="space-y-3 pt-2">
+          <h3 class="font-orbitron text-xs font-semibold text-amber-400 flex items-center gap-1.5">
+            <i data-lucide="compass" class="w-3.5 h-3.5"></i> RECEPTIVE VECTOR MATRIX
+          </h3>
+          
+          <div class="space-y-2 font-mono-tech text-xs">
+            <div>
+              <div class="flex justify-between text-cyan-300">
+                <span>Receptive Angle</span>
+                <span id="angle-val">120°</span>
+              </div>
+              <input type="range" id="slider-angle" min="0" max="360" value="120" class="w-full mt-1">
+            </div>
+            
+            <div>
+              <div class="flex justify-between text-cyan-300">
+                <span>Receptive Reach</span>
+                <span id="reach-val">50m</span>
+              </div>
+              <input type="range" id="slider-reach" min="5" max="150" value="50" class="w-full mt-1">
+            </div>
+          </div>
+        </div>
+
+        <!-- Mini Radar Graphic -->
+        <div class="p-3 bg-cyan-950/50 rounded-lg border border-cyan-500/30 flex flex-col items-center">
+          <div class="relative w-24 h-24 rounded-full border border-cyan-500/40 flex items-center justify-center overflow-hidden">
+            <div class="absolute inset-0 border border-cyan-500/20 rounded-full scale-75"></div>
+            <div class="absolute inset-0 border border-cyan-500/20 rounded-full scale-50"></div>
+            <div class="absolute w-full h-[1px] bg-cyan-500/30"></div>
+            <div class="absolute h-full w-[1px] bg-cyan-500/30"></div>
+            <div class="absolute top-1/2 left-1/2 w-12 h-12 bg-gradient-to-tr from-cyan-500/40 to-transparent rounded-tl-full radar-sweep origin-bottom-right"></div>
+            <div class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></div>
+          </div>
+          <span class="text-[10px] font-mono-tech text-cyan-400/70 mt-2">NFC / BLUETOOTH FIELD ACTIVE</span>
+        </div>
+
+        <!-- Live Node Output Block -->
+        <div class="p-2.5 bg-black/60 rounded border border-cyan-500/30 font-mono-tech text-[11px] text-cyan-300/80 space-y-1">
+          <div>BUS: <span class="text-white" id="node-bus-name">Mark_Quantum_Node</span></div>
+          <div>NET STATUS: <span class="text-emerald-400">STABLE (0.4ms)</span></div>
+          <div>ENTROPY SEED: <span class="text-amber-300" id="node-entropy">0x9948F2A</span></div>
+        </div>
+      </aside>
+
+      <!-- 3D DISPLAY QUICK TOOLBAR (BOTTOM CENTER) -->
+      <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 cyber-glass px-4 py-2 rounded-full flex items-center space-x-3 pointer-events-auto border border-cyan-500/40 shadow-2xl z-10">
+        <button id="btn-wireframe" class="px-3 py-1 rounded-full bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 text-xs font-mono-tech flex items-center gap-1.5 transition">
+          <i data-lucide="box" class="w-3.5 h-3.5"></i> Wireframe
+        </button>
+        <button id="btn-autorotate" class="px-3 py-1 rounded-full bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 text-xs font-mono-tech flex items-center gap-1.5 transition">
+          <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i> Orbit
+        </button>
+        <div class="w-[1px] h-4 bg-cyan-500/30"></div>
+        <select id="select-preset-shape" class="bg-cyan-950 text-cyan-300 text-xs font-mono-tech border border-cyan-500/40 rounded-full px-2 py-1 outline-none cursor-pointer">
+          <option value="ring">Preset: Ring Aegis</option>
+          <option value="crystal">Preset: Crystal Spire</option>
+          <option value="polyhedron">Preset: Cyber Polyhedron</option>
+          <option value="spike">Preset: Plasma Spikes</option>
+          <option value="shield">Preset: Displaced Shield</option>
+        </select>
+        <div class="w-[1px] h-4 bg-cyan-500/30"></div>
+        <select id="select-material" class="bg-cyan-950 text-amber-300 text-xs font-mono-tech border border-amber-500/40 rounded-full px-2 py-1 outline-none cursor-pointer">
+          <option value="gold">Cyber Gold</option>
+          <option value="obsidian">Dark Obsidian</option>
+          <option value="cyan">Neon Cyan</option>
+          <option value="ruby">Plasma Ruby</option>
+          <option value="emerald">Emerald Chrome</option>
+        </select>
+      </div>
+
+      <!-- RIGHT DRAWER (AVATAR REGISTRY GATEWAY & PROCEDURAL EMBLEM COMPILER) -->
+      <aside id="right-drawer" class="w-80 sm:w-96 cyber-glass rounded-xl p-4 flex flex-col space-y-4 pointer-events-auto transform translate-x-full transition-transform duration-300 ease-out border border-amber-500/30 z-20 overflow-y-auto">
+        <div class="flex justify-between items-center border-b border-amber-500/30 pb-2">
+          <h2 class="font-orbitron text-sm font-bold tracking-wider text-amber-400 flex items-center gap-2">
+            <i data-lucide="cpu" class="w-4 h-4"></i> EMBLEM & AVATAR STUDIO
+          </h2>
+          <button id="close-right-drawer" class="text-amber-400/70 hover:text-amber-200">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- AUTH FLOW SECTION (UNVERIFIED) -->
+        <div id="auth-flow-section" class="space-y-4">
+          <div class="p-3 bg-amber-950/30 rounded-lg border border-amber-500/30 text-xs text-amber-200/90 leading-relaxed font-mono-tech">
+            <i data-lucide="info" class="w-4 h-4 text-amber-400 inline mr-1"></i>
+            Register your Node identity to unlock procedural mesh compiler synthesis and network deployment.
+          </div>
+
+          <form id="form-generate-code" class="space-y-3 font-mono-tech">
+            <div>
+              <label class="block text-xs text-amber-300/80 mb-1">NODE DISPLAY / BUSINESS NAME</label>
+              <input type="text" id="input-auth-name" required placeholder="e.g. Mark_Aegis_Labs" value="Mark" class="w-full px-3 py-2 rounded bg-black/60 border border-amber-500/40 text-amber-200 text-xs focus:outline-none focus:border-amber-400">
+            </div>
+            <div>
+              <label class="block text-xs text-amber-300/80 mb-1">COMMUNICATION PIPELINE (EMAIL / SMS)</label>
+              <input type="text" id="input-auth-contact" required placeholder="e.g. mark@capsulecraft.io" value="mark.node@capsulecraft.net" class="w-full px-3 py-2 rounded bg-black/60 border border-amber-500/40 text-amber-200 text-xs focus:outline-none focus:border-amber-400">
+            </div>
+            <button type="submit" class="w-full py-2.5 rounded bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-orbitron font-bold text-xs tracking-wider transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+              <i data-lucide="send" class="w-3.5 h-3.5"></i> GENERATE VERIFICATION PIPELINE
+            </button>
+          </form>
+
+          <!-- Mock Code Verification Box -->
+          <div id="verification-code-box" class="hidden p-3 bg-black/80 rounded-lg border border-cyan-500/40 space-y-3 font-mono-tech animate-fade-in">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-cyan-400">DEMO VERIFICATION CODE:</span>
+              <span id="generated-code-display" class="px-2 py-0.5 bg-cyan-950 text-cyan-300 font-bold border border-cyan-500/50 rounded text-sm tracking-widest">-----</span>
+            </div>
+            
+            <form id="form-verify-code" class="space-y-2">
+              <input type="text" id="input-verify-code" required placeholder="Enter 6-digit code" class="w-full px-3 py-1.5 rounded bg-cyan-950/60 border border-cyan-500/40 text-cyan-200 text-xs text-center font-bold tracking-widest focus:outline-none focus:border-cyan-400">
+              <button type="submit" class="w-full py-2 rounded bg-cyan-500 hover:bg-cyan-400 text-black font-orbitron font-bold text-xs tracking-wider transition">
+                CONFIRM & SPAWN AVATAR MESH
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- VERIFIED AVATAR PROCEDURAL EMBLEM STUDIO SECTION -->
+        <div id="verified-studio-section" class="hidden space-y-4">
+          <div class="p-3 bg-cyan-950/40 rounded-lg border border-cyan-500/40 flex items-center justify-between">
+            <div>
+              <div class="text-[10px] text-cyan-400 font-mono-tech">AUTHENTICATED NODE</div>
+              <div id="user-display-name" class="text-sm font-orbitron font-bold text-amber-300">Mark</div>
+            </div>
+            <span class="px-2 py-0.5 bg-emerald-950 border border-emerald-500/50 text-emerald-400 text-[10px] font-mono-tech rounded">ONLINE</span>
+          </div>
+
+          <!-- Text-to-Geometry Compiler -->
+          <div class="space-y-2">
+            <label class="block font-orbitron text-xs font-semibold text-cyan-300 flex items-center justify-between">
+              <span>TEXT GEOMETRY COMPILER</span>
+              <span class="text-[10px] font-mono-tech text-cyan-400/60">PROMPT SYNTHESIS</span>
+            </label>
+            <textarea id="text-prompt-input" rows="2" class="w-full px-3 py-2 rounded bg-black/60 border border-cyan-500/40 text-cyan-200 text-xs font-mono-tech focus:outline-none focus:border-cyan-400 resize-none">crystal wing spike ring gold nexus shield</textarea>
+            <button id="btn-compile-text" class="w-full py-2 rounded bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-black font-orbitron font-bold text-xs tracking-wider transition flex items-center justify-center gap-2">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> SYNTHESIZE TEXT EMBLEM MESH
+            </button>
+          </div>
+
+          <div class="border-t border-cyan-500/20 pt-3 space-y-2">
+            <label class="block font-orbitron text-xs font-semibold text-amber-300">IMAGE HEIGHTMAP DISPLACEMENT</label>
+            
+            <!-- Heightmap Presets -->
+            <div class="grid grid-cols-2 gap-2 font-mono-tech text-[11px]">
+              <button data-preset="circuit" class="preset-heightmap-btn px-2 py-1.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 hover:border-amber-400 transition text-left">⚡ Cyber Circuit</button>
+              <button data-preset="hex" class="preset-heightmap-btn px-2 py-1.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 hover:border-amber-400 transition text-left">⬡ Hex Matrix</button>
+              <button data-preset="neural" class="preset-heightmap-btn px-2 py-1.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 hover:border-amber-400 transition text-left">🌊 Neural Wave</button>
+              <button data-preset="bio" class="preset-heightmap-btn px-2 py-1.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 hover:border-amber-400 transition text-left">☣ Biomechanical</button>
+            </div>
+
+            <!-- Custom File Upload -->
+            <div class="pt-1">
+              <label class="block text-[11px] font-mono-tech text-cyan-300/70 mb-1">UPLOAD CUSTOM HEIGHTMAP IMAGE:</label>
+              <input type="file" id="input-heightmap-file" accept="image/*" class="block w-full text-xs text-cyan-300/80 fi
