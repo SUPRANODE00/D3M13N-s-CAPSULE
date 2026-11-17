@@ -1,0 +1,116 @@
+name: Omnidirectional Synergy & Azure WebApp Compute-Node
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      node_mode:
+        description: 'Operation Mode (spherical-orb / azure-compute-sync / metric-nine-ingress)'
+        required: true
+        default: 'omnidirectional'
+        type: choice
+        options:
+          - omnidirectional
+          - spherical-orb
+          - azure-compute-sync
+
+env:
+  AZURE_WEBAPP_NAME: "your-app-name"
+  AZURE_WEBAPP_PACKAGE_PATH: "."
+  NODE_VERSION: "20.x"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: "azure-telemetry-compute-node"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Origin Repository
+        uses: actions/checkout@v4
+
+      - name: Initialize Spherical Orb-Complex & MAC/Bluetooth Node Binding
+        run: |
+          echo "Initializing spherical coordinate system (r, theta, phi) & MAC/Bluetooth node binding..."
+          mkdir -p .capsule/spherical-orb .capsule/telemetry/human .capsule/telemetry/hardware
+          
+          cat << EOF > .capsule/spherical-orb/state.yaml
+          node_mode: "${{ github.event.inputs.node_mode || 'omnidirectional' }}"
+          timestamp: "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          coordinate_system: "spherical-orb-complex"
+          metric_scale: 9
+          binding_address: "MAC-BT-00:FF:EE:AA:55"
+          wildcard_domain: "*.HoustonSatanicCouncil.org"
+          crypto_channel: "omni-crypto-lingual-binary"
+          status: "active-signal-hopping-engaged"
+          EOF
+
+      - name: Execute Auto-Reciprocate Ping & Infrared Blacklight Thermo Feedback
+        run: |
+          echo "Executing auto-reciprocate raw transmission and return alert with resonated ping..."
+          cat << EOF > .capsule/spherical-orb/vector-metrics.json
+          {
+            "spatial_coordinates": {"x": 0.382, "y": 0.618, "z": 1.000},
+            "calculus_vector": "invaginated-complex-manifold",
+            "infrared_thermo_feedback": "return-to-sender-active",
+            "illuminism_signal_status": "nominal"
+          }
+          EOF
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: npm install, build, and test
+        run: |
+          npm install
+          npm run build --if-present
+          npm run test --if-present
+
+      - name: Evaluate Mutual Ground & Objective Branching Potentials
+        run: |
+          echo "Evaluating mutual insights and decentralized architectural developer convergence..."
+          if [ -d "node_modules" ]; then
+            echo "Mutual ground verified: Advancing loop-automated objective branching potentials."
+            echo '{"branch_state": "advanced", "consensus": "mutual-insight-reached"}' > .capsule/spherical-orb/branch-state.json
+          else
+            echo "⚠️ Threat or divergence detected: Triggering alert sequence!"
+            echo '{"alert": "active", "reason": "mutual ground disruption"}' > .capsule/spherical-orb/threat-alert.json
+          fi
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-app
+          path: .
+
+  deploy:
+    permissions:
+      contents: none
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Development'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app
+
+      - name: 'Deploy to Azure WebApp'
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
