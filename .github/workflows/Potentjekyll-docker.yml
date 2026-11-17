@@ -1,0 +1,101 @@
+name: Omnidirectional Synergy & Jekyll Spherical Orb-Complex Compute-Node
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      node_mode:
+        description: 'Operation Mode (spherical-orb / jekyll-compute-sync / metric-nine-ingress)'
+        required: true
+        default: 'omnidirectional'
+        type: choice
+        options:
+          - omnidirectional
+          - spherical-orb
+          - jekyll-compute-sync
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "jekyll-telemetry-compute-node"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Origin Repository
+        uses: actions/checkout@v4
+
+      - name: Initialize Spherical Orb-Complex & MAC/Bluetooth Node Binding
+        run: |
+          echo "Initializing spherical coordinate system (r, theta, phi) & MAC/Bluetooth node binding..."
+          mkdir -p .capsule/spherical-orb .capsule/telemetry/human .capsule/telemetry/hardware
+          
+          cat << EOF > .capsule/spherical-orb/state.yaml
+          node_mode: "${{ github.event.inputs.node_mode || 'omnidirectional' }}"
+          timestamp: "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          coordinate_system: "spherical-orb-complex"
+          metric_scale: 9
+          binding_address: "MAC-BT-00:FF:EE:AA:55"
+          crypto_channel: "omni-crypto-lingual-binary"
+          status: "active-signal-hopping-engaged"
+          EOF
+
+      - name: Execute Auto-Reciprocate Ping & Infrared Blacklight Thermo Feedback
+        run: |
+          echo "Executing auto-reciprocate raw transmission and return alert with resonated ping..."
+          
+          cat << EOF > .capsule/spherical-orb/vector-metrics.json
+          {
+            "spatial_coordinates": {"x": 0.382, "y": 0.618, "z": 1.000},
+            "calculus_vector": "invaginated-complex-manifold",
+            "infrared_thermo_feedback": "return-to-sender-active",
+            "illuminism_signal_status": "nominal"
+          }
+          EOF
+
+      - name: Build the site in the jekyll/builder container & Translate Encapsulated Signals
+        run: |
+          echo "Processing bimodal time-series stream and compiling Jekyll artifact through container node..."
+          docker run \
+          -v ${{ github.workspace }}:/srv/jekyll -v ${{ github.workspace }}/_site:/srv/jekyll/_site \
+          jekyll/builder:latest /bin/bash -c "chmod -R 777 /srv/jekyll && jekyll build --future"
+
+      - name: Evaluate Mutual Ground & Objective Branching Potentials
+        run: |
+          echo "Evaluating mutual insights and decentralized architectural developer convergence..."
+          if [ -d "_site" ]; then
+            echo "Mutual ground verified: Advancing loop-automated objective branching potentials."
+            echo '{"branch_state": "advanced", "consensus": "mutual-insight-reached"}' > .capsule/spherical-orb/branch-state.json
+          else
+            echo "⚠️ Threat or divergence detected: Triggering alert sequence!"
+            echo '{"alert": "active", "reason": "mutual ground disruption"}' > .capsule/spherical-orb/threat-alert.json
+          fi
+
+      - name: Package & Generate Translator-Interpreting String Payload
+        run: |
+          echo "Packing variables into continuous-RF wrapper string..."
+          tar -czf telemetry-capsule.tar.gz .capsule/ _site/
+          echo "Capsule packaged successfully for gateway transmission."
+
+      - name: Setup Pages & Deploy Equilibrium Artifact
+        uses: actions/configure-pages@v5
+
+      - name: Upload Capsule Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+      - name: Execute Endpoint Broker Synchronization
+        id: deployment
+        uses: actions/deploy-pages@v5
