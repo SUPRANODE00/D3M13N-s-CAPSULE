@@ -1,0 +1,72 @@
+name: Omnidirectional Telemetry Compute-Node Bridge
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      node_mode:
+        description: 'Operation Mode (omnidirectional / bimodal-sync / capsule-ingress)'
+        required: true
+        default: 'omnidirectional'
+        type: choice
+        options:
+          - omnidirectional
+          - bimodal-sync
+          - capsule-ingress
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "telemetry-compute-node"
+  cancel-in-progress: false
+
+jobs:
+  bimodal-signal-node:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Origin Repository
+        uses: actions/checkout@v4
+
+      - name: Initialize OASS Capsule Compartment
+        run: |
+          echo "Initializing capsule compartment (N₁₀₀, P₃₀₀)..."
+          mkdir -p .capsule/telemetry/human .capsule/telemetry/hardware
+          
+          # Write environment state and mode configuration
+          cat << EOF > .capsule/state.yaml
+          node_mode: "${{ github.event.inputs.node_mode || 'omnidirectional' }}"
+          timestamp: "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          crypto_channel: "omni-crypto-lingual-binary"
+          EOF
+
+      - name: Normalize Bimodal Metrics (Human + Hardware)
+        run: |
+          echo "Processing bimodal time-series stream..."
+          
+          # Simulating Human Telemetry Array Ingestion (PPG/ECG/GSR coefficients)
+          echo '{"metric_type": "human", "status_coefficient": 0.95, "channel": "biometric-array"}' > .capsule/telemetry/human/signal.json
+          
+          # Simulating Hardware State Variables (Temp/Volt/I/O metrics)
+          echo '{"metric_type": "hardware", "status_coefficient": 0.99, "channel": "node-antenna"}' > .capsule/telemetry/hardware/metrics.json
+
+      - name: Package & Generate Translator-Interpreting String Payload
+        run: |
+          echo "Packing variables into continuous-RF wrapper string..."
+          tar -czf telemetry-capsule.tar.gz .capsule/
+          echo "Capsule packaged successfully for gateway transmission."
+
+      - name: Setup Pages & Deploy Equilibrium Artifact
+        uses: actions/configure-pages@v5
+
+      - name: Upload Capsule Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.capsule'
+
+      - name: Execute Endpoint Broker Synchronization
+        id: deployment
+        uses: actions/deploy-pages@v5
