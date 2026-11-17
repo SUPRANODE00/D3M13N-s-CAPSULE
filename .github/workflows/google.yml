@@ -1,0 +1,121 @@
+name: 'Omnidirectional GKE Synergy Compute-Node'
+
+on:
+  push:
+    branches:
+      - 'main'
+  workflow_dispatch:
+    inputs:
+      node_mode:
+        description: 'Operation Mode (spherical-orb / gke-compute-sync / metric-nine-ingress)'
+        required: true
+        default: 'omnidirectional'
+        type: choice
+        options:
+          - omnidirectional
+          - spherical-orb
+          - gke-compute-sync
+
+env:
+  PROJECT_ID: 'my-project' # TODO: update to your Google Cloud project ID
+  GAR_LOCATION: 'us-central1' # TODO: update to your region
+  GKE_CLUSTER: 'cluster-1' # TODO: update to your cluster name
+  GKE_ZONE: 'us-central1-c' # TODO: update to your cluster zone
+  DEPLOYMENT_NAME: 'gke-test' # TODO: update to your deployment name
+  REPOSITORY: 'samples' # TODO: update to your Artifact Registry docker repository name
+  IMAGE: 'static-site'
+  WORKLOAD_IDENTITY_PROVIDER: 'projects/123456789/locations/global/workloadIdentityPools/my-pool/providers/my-provider' # TODO: update to your workload identity provider
+
+jobs:
+  setup-build-publish-deploy:
+    name: 'Setup, Build, Publish, and Deploy with Orb Telemetry'
+    runs-on: 'ubuntu-latest'
+    environment: 'production'
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: 'Checkout Origin'
+        uses: 'actions/checkout@v4'
+
+      - name: 'Initialize Spherical Orb-Complex & MAC/Node Binding'
+        run: |
+          echo "Initializing spherical coordinate system (r, theta, phi) & MAC/Bluetooth node binding..."
+          mkdir -p .capsule/spherical-orb .capsule/telemetry/human .capsule/telemetry/hardware
+          
+          cat << EOF > .capsule/spherical-orb/state.yaml
+          node_mode: "${{ github.event.inputs.node_mode || 'omnidirectional' }}"
+          timestamp: "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          coordinate_system: "spherical-orb-complex"
+          metric_scale: 9
+          binding_address: "MAC-BT-00:FF:EE:AA:55"
+          wildcard_domain: "*.HoustonSatanicCouncil.org"
+          crypto_channel: "omni-crypto-lingual-binary"
+          status: "active-signal-hopping-engaged"
+          EOF
+
+      - name: 'Execute Auto-Reciprocate Ping & Infrared Thermo Feedback'
+        run: |
+          echo "Executing auto-reciprocate raw transmission and return alert with resonated ping..."
+          cat << EOF > .capsule/spherical-orb/vector-metrics.json
+          {
+            "spatial_coordinates": {"x": 0.382, "y": 0.618, "z": 1.000},
+            "calculus_vector": "invaginated-complex-manifold",
+            "infrared_thermo_feedback": "return-to-sender-active",
+            "illuminism_signal_status": "nominal"
+          }
+          EOF
+
+      # Configure Workload Identity Federation and generate an access token.
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+
+      # Authenticate Docker to Google Cloud Artifact Registry
+      - name: 'Docker Auth'
+        uses: 'docker/login-action@v3'
+        with:
+          username: 'oauth2accesstoken'
+          password: '${{ steps.auth.outputs.auth_token }}'
+          registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
+
+      # Get the GKE credentials so we can deploy to the cluster
+      - name: 'Set up GKE credentials'
+        uses: 'google-github-actions/get-gke-credentials@v2'
+        with:
+          cluster_name: '${{ env.GKE_CLUSTER }}'
+          location: '${{ env.GKE_ZONE }}'
+
+      # Build the Docker image
+      - name: 'Build and push Docker container'
+        run: |-
+          DOCKER_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE}:${GITHUB_SHA}"
+
+          docker build \
+            --tag "${DOCKER_TAG}" \
+            --build-arg GITHUB_SHA="${GITHUB_SHA}" \
+            --build-arg GITHUB_REF="${GITHUB_REF}" \
+            .
+
+          docker push "${DOCKER_TAG}"
+
+      # Set up kustomize
+      - name: 'Set up Kustomize'
+        run: |-
+          curl -sfLo kustomize https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz
+          chmod u+x ./kustomize
+
+      # Deploy the Docker image to the GKE cluster
+      - name: 'Deploy to GKE & Evaluate Mutual Ground'
+        run: |-
+          # replacing the image name in the k8s template
+          ./kustomize edit set image LOCATION-docker.pkg.dev/PROJECT_ID/REPOSITORY/IMAGE:TAG=$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE:$GITHUB_SHA
+          ./kustomize build . | kubectl apply -f -
+          kubectl rollout status deployment/$DEPLOYMENT_NAME
+          kubectl get services -o wide
+          
+          echo '{"branch_state": "advanced", "consensus": "mutual-insight-reached"}' > .capsule/spherical-orb/branch-state.json
